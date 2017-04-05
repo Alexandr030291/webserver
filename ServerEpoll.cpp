@@ -15,7 +15,17 @@ static bool accept_action(int epfd, int listener, ServerEpoll *ev){
         return false;
     }
 
+    struct epoll_event cli_ev;
+    memset(&cli_ev, 0, sizeof(struct epoll_event));
 
+    ProxyClient *pc = new ProxyClient(cli_sd, ev);
+    pc->setClientIP(client.sin_addr.s_addr);
+
+    // NB: data - is an UNION
+    cli_ev.data.ptr = pc;
+    cli_ev.events = EPOLLIN;
+
+    return 0 == epoll_ctl(epfd, EPOLL_CTL_ADD, cli_sd, &cli_ev);
 }
 
 ServerEpoll::ServerEpoll(HOST host,PORT port) {
@@ -68,11 +78,47 @@ void ServerEpoll::event_loop() {
         }
 
         for (int i = 0; i < epoll_ret; ++i){
+            //Обработка клиента
             if (events[i].data.fd == listener()){
                 if (!accept_action(epoll_fd, listener(), this)){
                     throw "FATAL. accept!";
                 }
                 continue;
+            }
+
+            // Выполням работу с дескриптором
+            if (events[i].events & EPOLLHUP){
+                // e.g. previous write() was in a already closed sd
+                Client *c = static_cast<Client*>(events[i].data.ptr);
+                disconnected_clients.push_back(c);
+            }else if (events[i].events & EPOLLIN){
+                Client *c = static_cast<Client*>(events[i].data.ptr);
+                if (c->_state != client_state_t::WANT_READ)continue;
+
+                char buf[65536 * 2];
+                memset(buf, 0, sizeof(buf));
+
+                int r = ::read(c->_sd, buf, sizeof(buf) - 1);
+                buf[r] = '\0';
+
+                if (r <= 0){
+                    disconnected_clients.push_back(c);
+                }else if (r > 0){
+                    c->onRead(string(buf, buf + r));
+                }
+
+            }else if (events[i].events & EPOLLOUT){
+                Client *c = static_cast<Client*>(events[i].data.ptr);
+                if (c->_state != client_state_t::WANT_WRITE){
+                    continue;
+                }
+                c->onWrite();
+            }else{
+                Client *cs = (Client*)events[i].data.ptr;
+                if (events[i].events & EPOLLERR)
+                    perror("event epollerr on sd: "+ cs->_sd);
+                else
+                    perror("event unknown [sd: {0}, events: {1}]"+ cs->_sd+ static_cast<unsigned>(events[i].events));
             }
         }
     }

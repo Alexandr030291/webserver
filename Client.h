@@ -28,7 +28,7 @@ struct Client
     Client(int sd, client_state_t state) : _sd(sd), _state(state) {}
     virtual ~Client() { if (_sd > 0) ::close (_sd); }
 
-    virtual void onRead(string &str) {}
+    virtual void onRead(const string &str) {}
     virtual void onWrite()                      {}
     virtual void onDead()                       {}
 
