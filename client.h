@@ -9,10 +9,9 @@
 #include <string.h>
 #include <iostream>
 #include "classes.h"
-#include "http.h"
 
-enum class client_state_t: uint8_t
-{
+
+enum class client_state_t: uint8_t{
     WANT_READ,
     WANT_WRITE,
     WANT_CLOSE

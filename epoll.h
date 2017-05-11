@@ -8,14 +8,19 @@
 
 class EpollEngine {
 public:
-    EpollEngine(int query_client, int listener);
+    EpollEngine() = default;
+    EpollEngine(int query_client);
     ~EpollEngine();
-    void run();
+    static void * run(void * args);
     void addClient(Client *client);
     static std::atomic<bool> g_Stop;
+
+    int get_epoll_fd() const;
+
+    int get_max_epoll_event() const;
+
 private:
     int _epoll_fd;
-    int _listener;
     int _max_epoll_event;
 };
 

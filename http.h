@@ -47,78 +47,18 @@
 #define FORBIDDEN "/resourse/forbidden.html"
 #define METHOD_NOT_ALLOWED "/resourse/MethodNotAllowed.html"
 
-char * root_path = (char *) DEFAULT_ROOT_PATH;
-char * server_path = (char *) DEFAULT_SERVER_PATH;
+static struct DefaultPath {
+    char *root_path = (char *) DEFAULT_ROOT_PATH;
+    char *server_path = (char *) DEFAULT_SERVER_PATH;
+}defaultPath;
 
-short ctoi(char ch) {
-    if(ch >= '0' && ch <= '9') {
-        return ch - '0';
-    }
-    else if(ch >= 'A' && ch <= 'F') {
-        return (short) (ch - 'A' + 10);
-    }
-    else if(ch >= 'a' && ch <= 'f') {
-        return (short) (ch - 'a' + 10);
-    }
-    else {
-        return -1;
-    }
+short ctoi(char ch);
 
-}
+short oxToChar(char * oxCharCode);
 
-short oxToChar(char * oxCharCode) {
-    short result;
-    short chh = ctoi(*(oxCharCode));
-    short chl = ctoi(*(oxCharCode + 1));
-    if (chh >= 0 && chl >= 0) {
-        result = (chh << 4)+ chl;
-    }
-    else {
-        result = -1;
-    }
-    return result;
+short utf_8(char * dst, char * src);
 
-}
-
-short utf_8(char * dst, char * src) {
-    char * srcPointer = strchr(src, '%');
-    while(srcPointer != NULL) {
-        memcpy(dst, src, srcPointer - src);
-        dst += srcPointer - src;
-        src = srcPointer + 3;
-
-        if(((*(srcPointer + 1)) != '\0') && ((*(srcPointer + 2)) != '\0')) {
-            short res = oxToChar(srcPointer + 1);
-            if (res < 0) {
-                return -1;
-            }
-            *dst = (char)res;
-            dst += 1;
-            srcPointer += 3;
-        }
-        else {
-            return -2;
-        }
-        srcPointer = strchr(srcPointer, '%');
-    }
-
-    memcpy(dst, src, strlen(src) + 1);
-    return 0;
-
-}
-
-char * http_date(tm * time) {
-    char * result = (char*)malloc(240);
-    const char day_name[][4] =  {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-    const char month_name[][4] = {"Jan", "Feb", "Mar", "Apr",
-                                  "May", "Jun", "Jul", "Aug",
-                                  "Sep", "Oct", "Nov", "Dec"};
-    sprintf(result, "%s, %2d %s %4d %2d:%2d:%2d GMT",
-            day_name[time->tm_wday], time->tm_mday,
-            month_name[time->tm_mon], 1900 + time->tm_year,
-            time->tm_hour, time->tm_min, time->tm_sec);
-    return result;
-}
+char * http_date(tm * time);
 
 struct URI {
     char * path;
@@ -130,7 +70,7 @@ struct URI {
 
 
         bool error = true;
-        int len = strlen(uriString);
+        int len = (int) strlen(uriString);
 
         char * strEnd =  uriString + len;
 
@@ -148,7 +88,7 @@ struct URI {
             }
 
             dataLen = len + 25;
-            data = (char*)malloc(dataLen);
+            data = (char*)malloc((size_t) dataLen);
             path = data;
             int pathStrLen = 0;
             memcpy(path, pathBegin, pathEnd - pathBegin);
@@ -160,7 +100,7 @@ struct URI {
             }
             else {
                 lastJ = false;
-                pathStrLen = (pathEnd - pathBegin);
+                pathStrLen = (int) (pathEnd - pathBegin);
             }
             path[pathStrLen] = '\0';
 
@@ -170,7 +110,7 @@ struct URI {
                 query[queryEnd - queryBegin] = '\0';
             }
 
-            char * buf = (char*)malloc(pathStrLen + 25);
+            char * buf = (char*)malloc((size_t) (pathStrLen + 25));
             if (utf_8(buf, path) >= 0) {
                 memcpy(path, buf, strlen(buf) + 1);
             }
@@ -185,8 +125,8 @@ struct URI {
 
     URI(const URI & otherURI) {
         this->dataLen = otherURI.dataLen;
-        this->data = (char*)malloc(this->dataLen);
-        memcpy(this->data, otherURI.data, this->dataLen);
+        this->data = (char*)malloc((size_t) this->dataLen);
+        memcpy(this->data, otherURI.data, (size_t) this->dataLen);
         this->path = this->data;
 
         if (otherURI.query != NULL) {
@@ -261,12 +201,7 @@ struct RequestData {
 
         saveStr(&protocol, oldPos, newPos);
         uri = new URI(uriString);
-        if(strcmp(protocol, PROTOCOL_11) == 0) {
-            keepAlive = true;
-        }
-        else {
-            keepAlive = false;
-        }
+        keepAlive = strcmp(protocol, PROTOCOL_11) == 0;
     }
 
     RequestData(char * httpRequest) {
@@ -313,72 +248,72 @@ struct ResponseData {
         data = NULL;
         headerLen = 0;
         dataLen = 0;
-        char * protocol = PROTOCOL;
-        char * status = STATUS_200;
+        char * protocol = (char *) PROTOCOL;
+        char * status = (char *) STATUS_200;
         FileData * resultFile;
         char * path = request->uri->path;
         bool isGET  = strcmp(request->method, METHOD_GET) == 0;
         bool isHEAD = strcmp(request->method, METHOD_HEAD) == 0;
         bool isPOST = strcmp(request->method, METHOD_POST) == 0;
         if (strstr(request->uri->path, "../")) {
-            path = FORBIDDEN;
-            resultFile = getFile(path, server_path, isGET);
-            status = STATUS_403;
+            path = (char *) FORBIDDEN;
+            resultFile = getFile(path, defaultPath.server_path, isGET);
+            status = (char *) STATUS_403;
         }
         else {
-            resultFile = getFile(request->uri->path, root_path, isGET);
+            resultFile = getFile(request->uri->path, defaultPath.root_path, isGET);
         }
 
-        if (resultFile->success != true) {
+        if (!resultFile->success) {
             if(request->uri->lastJ) {
-                path = FORBIDDEN;
-                resultFile = getFile(path, server_path, isGET);
-                status = STATUS_403;;
+                path = (char *) FORBIDDEN;
+                resultFile = getFile(path, defaultPath.server_path, isGET);
+                status = (char *) STATUS_403;;
             }
             else {
-                path = NOT_FOUND;
-                resultFile = getFile(path, server_path, isGET);
-                status = STATUS_404;
+                path = (char *) NOT_FOUND;
+                resultFile = getFile(path, defaultPath.server_path, isGET);
+                status = (char *) STATUS_404;
             }
         }
         if (!(isGET || isHEAD)) {
-            path = METHOD_NOT_ALLOWED;
-            resultFile = getFile(path, server_path, true);
-            status = STATUS_405;
+            path = (char *) METHOD_NOT_ALLOWED;
+            resultFile = getFile(path, defaultPath.server_path, true);
+            status = (char *) STATUS_405;
         }
 
         char * format;
 
         char * ptr = strrchr(path, '.');
         if (ptr < 0) {
-            format = MIME_TEXT_HTML;
+            format = (char *) MIME_TEXT_HTML;
         }
         else if (strcmp(ptr, ".jpg") == 0) {
-            format = MIME_IMAGE_JPG;
+            format = (char *) MIME_IMAGE_JPG;
         }
         else if(strcmp(ptr, ".png") == 0) {
-            format = MIME_IMAGE_PNG;
+            format = (char *) MIME_IMAGE_PNG;
         }
         else if(strcmp(ptr, ".jpeg") == 0) {
-            format = MIME_IMAGE_JPEG;
+            format = (char *) MIME_IMAGE_JPEG;
         }
         else if(strcmp(ptr, ".gif") == 0) {
-            format = MIME_IMAGE_GIF;
+            format = (char *) MIME_IMAGE_GIF;
         }
         else if(strcmp(ptr, ".html") == 0) {
-            format = MIME_TEXT_HTML;
+            format = (char *) MIME_TEXT_HTML;
         }
         else if(strcmp(ptr, ".css") == 0) {
-            format = MIME_TEXT_CSS;
+            format = (char *) MIME_TEXT_CSS;
         }
         else if(strcmp(ptr, ".swf") == 0) {
-            format = MIME_SWF;
+            format = (char *) MIME_SWF;
         }
         else if(strcmp(ptr, ".js") == 0) {
-            format = MIME_APPLICATION_JAVASCRIPT;
+            format = (char *) MIME_APPLICATION_JAVASCRIPT;
         }
         else {
-            format = MIME_TEXT_HTML;
+            format = (char *) MIME_TEXT_HTML;
         }
 
 
@@ -386,10 +321,10 @@ struct ResponseData {
 
 
         data = NULL;
-        dataLen = NULL;
+        dataLen = 0;
         if (!isHEAD) {
             data = resultFile->data;
-            dataLen = resultFile->length;
+            dataLen = (int) resultFile->length;
         }
         else {
 
@@ -401,7 +336,7 @@ struct ResponseData {
                             HEADER_DATE, date,
                             HEADER_CONNECTION, request->keepAlive?CONNECTION_KEEP_ALIVE:CONNECTION_CLOSE,
                             HEADER_CONTENT_TYPE, format,
-                            HEADER_CONTENT_LENGTH, resultFile->length);
+                            HEADER_CONTENT_LENGTH, (int) resultFile->length);
 
     }
 

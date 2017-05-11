@@ -1,6 +1,5 @@
 #include <fcntl.h>
 #include <cstdio>
-#include <zconf.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -17,6 +16,8 @@
 #include <sstream>
 #include <evutil.h>
 #include "server.h"
+#include "epoll.h"
+#include "client.h"
 
 int setNonBlocking(int sock) {
     int opts;
@@ -35,9 +36,11 @@ int setNonBlocking(int sock) {
     return 0;
 }
 
-Server::Server(char *host, int port, int thread_count) {
+Server::Server(char *host, int port, int thread_count, int query_client) {
     const int BACK_LOG = 100;
-
+    _select_id=0;
+    _epollEngines = NULL;
+    _threads = NULL;
     _listener = socket(AF_INET, SOCK_STREAM, 0);
     if (_listener < 0) {
         perror("Socket creation");
@@ -59,8 +62,42 @@ Server::Server(char *host, int port, int thread_count) {
         perror("Socket listen");
         exit(1);
     }
+    _thread_count =thread_count;
+    _threads = new pthread_t[_thread_count];
+    _epollEngines = new EpollEngine[_thread_count];
+    for (int i = 0; i < _thread_count; ++i) {
+        _epollEngines[i] = EpollEngine(query_client);
+    }
+    int status=0;
+    void * arg = nullptr;
+    for (int i = 0; i < _thread_count; i++) {
+        status = pthread_create(&_threads[i], NULL, _epollEngines[i].run, arg);
+        if (status != 0) {
+            printf("main error: can't create thread, status = %d\n", status);
+            exit(1);
+        }
+    }
 }
 
 Server::~Server() {
     close(_listener);
+    if(_epollEngines!=NULL) delete(_epollEngines);
+    if(_threads!=NULL) delete (_threads);
+}
+
+void Server::run() {
+    unsigned int clientSize = sizeof(sockaddr_in);
+    while (true) {
+        sockaddr_in clientAddr;
+        int clientDescriptor = accept(_listener, (sockaddr*)&clientAddr, &clientSize);
+        if (clientDescriptor<0) continue;
+        setNonBlocking(clientDescriptor);
+        select(clientDescriptor);
+    }
+}
+
+void Server::select(int clientDescriptor) {
+    EpollEngine *engine = &_epollEngines[_select_id++];
+    engine->addClient(new Client(clientDescriptor,engine));
+    _select_id%=_thread_count;
 }
