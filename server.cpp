@@ -56,7 +56,7 @@ Server::Server(char *host, int port, int thread_count, int query_client, int tim
         perror("Socket listen");
         exit(1);
     }
-    _thread_count =thread_count;
+    _thread_count = thread_count;
     _threads = new pthread_t[_thread_count];
     _epollEngines = new EpollEngine[_thread_count];
     for (int i = 0; i < _thread_count; ++i) {
@@ -73,9 +73,13 @@ Server::Server(char *host, int port, int thread_count, int query_client, int tim
 }
 
 Server::~Server() {
+    for (int i=0; i<_thread_count;i++) {
+        pthread_join(_threads[i], NULL);
+    }
     close(_listener);
-    if(_epollEngines!=NULL) delete(_epollEngines);
-    if(_threads!=NULL) delete (_threads);
+    if(_threads!=NULL) {
+        delete (_threads);
+    }
 }
 
 void Server::run() {

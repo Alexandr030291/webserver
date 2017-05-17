@@ -28,5 +28,6 @@ int main(int argc, char* argv[]) {
     pthread_create(&command, NULL, controller, false);
     Server epoll_server((char *) SERVER_HOST, SERVER_PORT, MAX_THREAD_COUNT, MAX_QUERY_SIZE, RUN_TIMEOUT);
     epoll_server.run();
+    pthread_join(command, NULL);
     return 0;
 }
