@@ -4,8 +4,8 @@ FileData* getFile(char * path, char * dir_path, bool readFile) {
 
     FileData *resultFile = new FileData;
     FILE *fp;
-    int path_len = strlen(path);
-    int dir_path_len = strlen(dir_path);
+    int path_len = (int) strlen(path);
+    int dir_path_len = (int) strlen(dir_path);
     if (path_len + dir_path_len >= 512) {
         return NULL;
     }

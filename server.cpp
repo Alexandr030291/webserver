@@ -1,5 +1,4 @@
 #include <fcntl.h>
-#include <cstdio>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <strings.h>
@@ -11,6 +10,7 @@
 
 void * runWorkerPthread(void * engine) {
     ((EpollEngine*)engine)->run();
+    return nullptr;
 }
 
 int setNonBlocking(int sock) {
@@ -80,7 +80,7 @@ Server::~Server() {
 
 void Server::run() {
     unsigned int clientSize = sizeof(sockaddr_in);
-    while (true) {
+    while (!EpollEngine::g_Stop) {
         sockaddr_in clientAddr;
         int clientDescriptor = accept(_listener, (sockaddr*)&clientAddr, &clientSize);
         if (clientDescriptor<0) continue;

@@ -6,10 +6,10 @@ short ctoi(char ch) {
         return ch - '0';
     }
     else if(ch >= 'A' && ch <= 'F') {
-        return ch - 'A' + 10;
+        return (short) (ch - 'A' + 10);
     }
     else if(ch >= 'a' && ch <= 'f') {
-        return ch - 'a' + 10;
+        return (short) (ch - 'a' + 10);
     }
     else {
         return -1;
@@ -74,8 +74,7 @@ char * http_date(tm * time) {
 URI::URI(char * uriString) {
 
 
-    bool error = true;
-    int len = strlen(uriString);
+    int len = (int) strlen(uriString);
 
     char * strEnd =  uriString + len;
 
@@ -93,7 +92,7 @@ URI::URI(char * uriString) {
         }
 
         dataLen = len + 25;
-        data = (char*)malloc(dataLen);
+        data = (char*)malloc((size_t) dataLen);
         path = data;
         int pathStrLen = 0;
         memcpy(path, pathBegin, pathEnd - pathBegin);
@@ -105,7 +104,7 @@ URI::URI(char * uriString) {
         }
         else {
             lastJ = false;
-            pathStrLen = (pathEnd - pathBegin);
+            pathStrLen = (int) (pathEnd - pathBegin);
         }
         path[pathStrLen] = '\0';
 
@@ -115,23 +114,19 @@ URI::URI(char * uriString) {
             query[queryEnd - queryBegin] = '\0';
         }
 
-        char * buf = (char*)malloc(pathStrLen + 25);
+        char * buf = (char*)malloc((size_t) (pathStrLen + 25));
         if (utf_8(buf, path) >= 0) {
             memcpy(path, buf, strlen(buf) + 1);
         }
         free(buf);
-        error = false;
-    }
-    else {
-        error = true;
     }
 
 }
 
 URI::URI(const URI & otherURI) {
     this->dataLen = otherURI.dataLen;
-    this->data = (char*)malloc(this->dataLen);
-    memcpy(this->data, otherURI.data, this->dataLen);
+    this->data = (char*)malloc((size_t) this->dataLen);
+    memcpy(this->data, otherURI.data, (size_t) this->dataLen);
     this->path = this->data;
 
     if (otherURI.query != NULL) {
@@ -163,7 +158,6 @@ void RequestData::init(char * httpRequest) {
     method = NULL;
     uriString = NULL;
 
-    this->httpRequest = httpRequest;
     char * oldPos = httpRequest;
     char * newPos = httpRequest;
     newPos = strchr(newPos, ' ');
@@ -185,7 +179,6 @@ void RequestData::init(char * httpRequest) {
     newPos++;
     oldPos = newPos;
     newPos = strchr(newPos, '\r');
-    bool end = false;
     if(newPos == NULL) {
         isValid = false;
         return;
@@ -193,16 +186,11 @@ void RequestData::init(char * httpRequest) {
 
     saveStr(&protocol, oldPos, newPos);
     uri = new URI(uriString);
-    if(strcmp(protocol, PROTOCOL_11) == 0) {
-        keepAlive = true;
-    }
-    else {
-        keepAlive = false;
-    }
+    keepAlive = strcmp(protocol, PROTOCOL_11) == 0;
 }
 
 RequestData::RequestData(char * httpRequest) {
-    headersData = (char*)malloc(4089);
+    (char*)malloc(4089);
     init(httpRequest);
 
 }
@@ -246,38 +234,38 @@ void ResponseData::getHTTPResponse() {
     data = NULL;
     headerLen = 0;
     dataLen = 0;
-    char * protocol = {PROTOCOL};
-    char * status = {STATUS_200};
+    char * protocol = (char *) PROTOCOL;
+    char * status = (char *) STATUS_200;
     FileData * resultFile;
     char * path = request->uri->path;
     bool isGET  = strcmp(request->method, METHOD_GET) == 0;
     bool isHEAD = strcmp(request->method, METHOD_HEAD) == 0;
-    bool isPOST = strcmp(request->method, METHOD_POST) == 0;
+    //bool isPOST = strcmp(request->method, METHOD_POST) == 0;
     if (strstr(request->uri->path, "../")) {
-        path = FORBIDDEN;
+        path = (char *) FORBIDDEN;
         resultFile = getFile(path, server_path, isGET);
-        status = STATUS_403;
+        status = (char *) STATUS_403;
     }
     else {
         resultFile = getFile(request->uri->path, root_path, isGET);
     }
 
-    if (resultFile->success != true) {
+    if (!resultFile->success) {
         if(request->uri->lastJ) {
-            path = FORBIDDEN;
+            path = (char *) FORBIDDEN;
             resultFile = getFile(path, server_path, isGET);
-            status = STATUS_403;;
+            status = (char *) STATUS_403;;
         }
         else {
-            path = NOT_FOUND;
+            path = (char *) NOT_FOUND;
             resultFile = getFile(path, server_path, isGET);
-            status = STATUS_404;
+            status = (char *) STATUS_404;
         }
     }
     if (!(isGET || isHEAD)) {
-        path = METHOD_NOT_ALLOWED;
+        path = (char *) METHOD_NOT_ALLOWED;
         resultFile = getFile(path, server_path, true);
-        status = STATUS_405;
+        status = (char *) STATUS_405;
     }
 
     char * format;
@@ -322,7 +310,7 @@ void ResponseData::getHTTPResponse() {
     dataLen = NULL;
     if (!isHEAD) {
         data = resultFile->data;
-        dataLen = resultFile->length;
+        dataLen = (int) resultFile->length;
     }
     else {
 
@@ -334,7 +322,7 @@ void ResponseData::getHTTPResponse() {
                         HEADER_DATE, date,
                         HEADER_CONNECTION, request->keepAlive?CONNECTION_KEEP_ALIVE:CONNECTION_CLOSE,
                         HEADER_CONTENT_TYPE, format,
-                        HEADER_CONTENT_LENGTH, resultFile->length);
+                        HEADER_CONTENT_LENGTH, (int) resultFile->length);
 
 }
 

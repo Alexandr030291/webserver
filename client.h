@@ -26,7 +26,7 @@ public:
     void onDead();
     int getDescription();
     client_state_t isStatus();
-    void nextStatus(client_state_t);
+
     void clear();
 private:
     int _client_descriptor;

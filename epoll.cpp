@@ -47,14 +47,6 @@ void EpollEngine::addClient(Client *client) {
     epoll_event ev;
     ev.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLOUT;
     ev.data.ptr = (void*)client;
-    int res = epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client->getDescription(), &ev);
-}
-
-int EpollEngine::get_epoll_fd() const {
-    return _epoll_fd;
-}
-
-int EpollEngine::get_max_epoll_event() const {
-    return _max_epoll_event;
+    epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client->getDescription(), &ev);
 }
 
