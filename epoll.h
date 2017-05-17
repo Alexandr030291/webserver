@@ -2,16 +2,14 @@
 #define WEBSERVER_EPOLL_H
 
 #include <atomic>
-#include "classes.h"
-
-#define EPOLL_QUEUE_LEN 65536
+#include "client.h"
 
 class EpollEngine {
 public:
     EpollEngine() = default;
-    EpollEngine(int query_client);
+    EpollEngine(int query_client,int timeout);
     ~EpollEngine();
-    static void * run(void * args);
+    void run();
     void addClient(Client *client);
     static std::atomic<bool> g_Stop;
 
@@ -22,6 +20,7 @@ public:
 private:
     int _epoll_fd;
     int _max_epoll_event;
+    int _max_time_out;
 };
 
 

@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <string.h>
 #include <iostream>
-#include "classes.h"
+#include "http.h"
 
 
 enum class client_state_t: uint8_t{
@@ -19,7 +19,7 @@ enum class client_state_t: uint8_t{
 
 class Client {
 public:
-    Client(int sd, EpollEngine *ev);
+    Client(int client_descriptor);
     virtual ~Client();
     void onRead();
     void onWrite();
@@ -29,12 +29,11 @@ public:
     void nextStatus(client_state_t);
     void clear();
 private:
-    EpollEngine *_ev;
     int _client_descriptor;
     client_state_t _state;
     RequestData * _p_request;
     ResponseData * _p_response;
-    char * _request_data;
+ //   char * _request_data;
 };
 
 

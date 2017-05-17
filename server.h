@@ -5,11 +5,11 @@
 #ifndef WEBSERVER_SERVER_H
 #define WEBSERVER_SERVER_H
 
-#include "classes.h"
+#include "epoll.h"
 
 class Server {
 public:
-    Server(char* host, int port, int thread_count, int query_client);
+    Server(char* host, int port, int thread_count, int query_client,int timeout);
     ~Server();
     void run();
 private:

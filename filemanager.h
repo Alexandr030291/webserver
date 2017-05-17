@@ -1,4 +1,3 @@
-#pragma once
 #ifndef WEBSERVER_FILEMANAGER_H
 #define WEBSERVER_FILEMANAGER_H
 

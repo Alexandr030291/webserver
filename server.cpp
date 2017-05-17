@@ -1,23 +1,17 @@
 #include <fcntl.h>
 #include <cstdio>
 #include <netinet/in.h>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <strings.h>
-#include <string.h>
 #include <arpa/inet.h>
-#include <errno.h>
 #include <stdlib.h>
-#include <sys/epoll.h>
-#include <signal.h>
 #include <iostream>
-#include <sstream>
 #include <evutil.h>
 #include "server.h"
-#include "epoll.h"
-#include "client.h"
+
+void * runWorkerPthread(void * engine) {
+    ((EpollEngine*)engine)->run();
+}
 
 int setNonBlocking(int sock) {
     int opts;
@@ -36,7 +30,7 @@ int setNonBlocking(int sock) {
     return 0;
 }
 
-Server::Server(char *host, int port, int thread_count, int query_client) {
+Server::Server(char *host, int port, int thread_count, int query_client, int timeout) {
     const int BACK_LOG = 100;
     _select_id=0;
     _epollEngines = NULL;
@@ -66,16 +60,15 @@ Server::Server(char *host, int port, int thread_count, int query_client) {
     _threads = new pthread_t[_thread_count];
     _epollEngines = new EpollEngine[_thread_count];
     for (int i = 0; i < _thread_count; ++i) {
-        _epollEngines[i] = EpollEngine(query_client);
+        _epollEngines[i] = EpollEngine(query_client,timeout);
     }
     int status=0;
-    void * arg = nullptr;
     for (int i = 0; i < _thread_count; i++) {
-        status = pthread_create(&_threads[i], NULL, _epollEngines[i].run, arg);
+        status = pthread_create(&_threads[i], NULL, runWorkerPthread, _epollEngines + i);
         if (status != 0) {
             printf("main error: can't create thread, status = %d\n", status);
             exit(1);
-        }
+       }
     }
 }
 
@@ -98,6 +91,6 @@ void Server::run() {
 
 void Server::select(int clientDescriptor) {
     EpollEngine *engine = &_epollEngines[_select_id++];
-    engine->addClient(new Client(clientDescriptor,engine));
+    engine->addClient(new Client(clientDescriptor));
     _select_id%=_thread_count;
 }
