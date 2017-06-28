@@ -10,7 +10,7 @@ public:
     EpollEngine(int query_client,int timeout);
     ~EpollEngine();
     void run();
-    void addClient(Client *client);
+    void addClient(int clientDescriptor);
     static std::atomic<bool> g_Stop;
 private:
     int _epoll_fd;

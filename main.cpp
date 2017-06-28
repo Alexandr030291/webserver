@@ -9,17 +9,16 @@
 
 void * controller(void *arg){
     bool stop = !(bool) arg;
-    const int max_buffer = 2048;
+    const int max_buffer = 32;
     const char STOP[] = "STOP";
     char buffer[max_buffer]= {'\0'};
-
-    while(stop){
+    do{
         scanf("%s",buffer);
         if (strcmp(buffer,STOP)==0){
             stop=!stop;
             EpollEngine::g_Stop = true;
         }
-    }
+    }while(stop);
     return nullptr;
 }
 

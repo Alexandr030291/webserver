@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <string.h>
 #include <iostream>
+#include <atomic>
 #include "http.h"
 
 

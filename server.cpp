@@ -87,6 +87,7 @@ void Server::run() {
     while (!EpollEngine::g_Stop) {
         sockaddr_in clientAddr;
         int clientDescriptor = accept(_listener, (sockaddr*)&clientAddr, &clientSize);
+     //   printf("%i\n",clients);
         if (clientDescriptor<0) continue;
         setNonBlocking(clientDescriptor);
         select(clientDescriptor);
@@ -95,6 +96,6 @@ void Server::run() {
 
 void Server::select(int clientDescriptor) {
     EpollEngine *engine = &_epollEngines[_select_id++];
-    engine->addClient(new Client(clientDescriptor));
+    engine->addClient(clientDescriptor);
     _select_id%=_thread_count;
 }

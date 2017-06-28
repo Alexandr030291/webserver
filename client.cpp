@@ -26,6 +26,7 @@ void Client::onRead() {
         _state=client_state_t::WANT_CLOSE;
     }
     delete _request_data;
+    client_state_t::WANT_CLOSE;
 }
 
 Client::~Client() {
@@ -60,9 +61,9 @@ void Client::onWrite() {
              && ((_p_response->countHeaderSendedBytes) == (_p_response->headerLen)));
     if (flag&&_p_request->keepAlive){
         clear();
-    } else{
+    } //else{
         _state=client_state_t::WANT_CLOSE;
-    }
+  //  }
 }
 
 void Client::onDead() {

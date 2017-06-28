@@ -6,6 +6,7 @@
 std::atomic<bool> EpollEngine::g_Stop(false);
 
 
+
 EpollEngine::EpollEngine(int query_client,int timeout) {
     _epoll_fd = epoll_create(query_client);
     _max_epoll_event = query_client;
@@ -21,32 +22,34 @@ void EpollEngine::run() {
         int nfds = epoll_wait(_epoll_fd, events, _max_epoll_event, _max_time_out);
         for (int i = 0; i < nfds; i++) {
             client = (Client*)(events[i].data.ptr);
-            if((events[i].events & EPOLLHUP)||(events[i].events & EPOLLERR)) {
-                client->onDead();
-            }
+     //       while (client!= nullptr) {
+                if ((events[i].events & EPOLLHUP) || (events[i].events & EPOLLERR)) {
+                    client->onDead();
+                }
 
-            if (events[i].events & EPOLLIN) {
-                if (client->isStatus() == client_state_t::WANT_READ)
-                    client->onRead();
-            }
+                if (events[i].events & EPOLLIN) {
+                    if (client->isStatus() == client_state_t::WANT_READ)
+                        client->onRead();
+                }
 
-            if (events[i].events & EPOLLOUT) {
-                if (client->isStatus()==client_state_t::WANT_WRITE)
-                    client->onWrite();
-            }
+                if (events[i].events & EPOLLOUT) {
+                    if (client->isStatus() == client_state_t::WANT_WRITE)
+                        client->onWrite();
+                }
 
-            if (client->isStatus()==client_state_t::WANT_CLOSE){
-                delete client;
-                continue;
-            }
+                if (client->isStatus() == client_state_t::WANT_CLOSE) {
+                    delete client;
+               }
+        //    }
         }
     }
 }
 
-void EpollEngine::addClient(Client *client) {
+void EpollEngine::addClient(int clientDescriptor) {
+    void *client= new Client(clientDescriptor);
     epoll_event ev;
     ev.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLOUT;
-    ev.data.ptr = (void*)client;
-    epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client->getDescription(), &ev);
+    ev.data.ptr = client;
+    epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, clientDescriptor, &ev);
 }
 
